@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme (for splash screen and non-Compose contexts) -->
+    <style name="Theme.HybridMusicPlayer" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorBackground">@color/deep_charcoal</item>
+        <item name="android:statusBarColor">@color/true_black</item>
+        <item name="android:navigationBarColor">@color/true_black</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

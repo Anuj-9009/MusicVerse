@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Industrial Minimalist Color Palette -->
+    <color name="deep_charcoal">#FF121212</color>
+    <color name="true_black">#FF000000</color>
+    <color name="surface_1">#FF1A1A1A</color>
+    <color name="surface_2">#FF1E1E1E</color>
+    <color name="surface_3">#FF242424</color>
+    <color name="electric_blue">#FF00BFFF</color>
+    <color name="sunset_orange">#FFFF5722</color>
+    <color name="text_primary">#FFE0E0E0</color>
+    <color name="text_secondary">#FFB0B0B0</color>
+</resources>
