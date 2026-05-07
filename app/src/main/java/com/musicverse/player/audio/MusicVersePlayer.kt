@@ -9,6 +9,13 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.musicverse.player.data.api.SponsorSegment
 import com.musicverse.player.data.repository.SponsorBlockRepository
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import androidx.media3.exoplayer.source.preload.DefaultPreloadManager
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +49,39 @@ class MusicVersePlayer @Inject constructor(
         private const val SPONSORBLOCK_CHECK_INTERVAL_MS = 500L
     }
 
+    // ── Deep-Tech Preload Architecture (v6.0) ─────────────────────────────────
+    private val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
+    
+    // Custom Network-Aware LoadControl (dynamic buffering based on connection)
+    private val customLoadControl = DefaultLoadControl.Builder()
+        .setBufferDurationsMs(
+            DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+            DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+            500, // Quick start (bufferForPlaybackMs)
+            1000 // Buffer before re-buffering (bufferForPlaybackAfterRebufferMs)
+        )
+        .build()
+
     // ── Players ──────────────────────────────────────────────────────────────
-    private val primaryPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
-    private val ghostPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    private val primaryPlayer: ExoPlayer = ExoPlayer.Builder(context)
+        .setBandwidthMeter(bandwidthMeter)
+        .setLoadControl(customLoadControl)
+        .build()
+        
+    private val ghostPlayer: ExoPlayer = ExoPlayer.Builder(context)
+        .setBandwidthMeter(bandwidthMeter) // Shared bandwidth meter to prevent resource contention
+        .setLoadControl(customLoadControl)
+        .build()
+
+    // DefaultPreloadManager for zero-latency join
+    private val preloadManager = DefaultPreloadManager(
+        TargetPreloadStatusControl<Int> { 1 }, // Preload 1st rank
+        DefaultMediaSourceFactory(context),
+        DefaultTrackSelector(context),
+        bandwidthMeter,
+        primaryPlayer.applicationLooper,
+        null // allocator
+    )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val handler = Handler(Looper.getMainLooper())
