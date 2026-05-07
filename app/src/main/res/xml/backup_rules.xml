@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Explicitly exclude Jetpack DataStore and standard shared preferences from cloud backups to prevent token leakage -->
+        <exclude domain="sharedpref" path="."/>
+        <exclude domain="file" path="datastore/"/>
+        <exclude domain="file" path="musicverse_secure_keys_pref.xml"/>
+    </cloud-backup>
+    <device-transfer>
+        <!-- Same rules for D2D (device-to-device) transfer -->
+        <exclude domain="sharedpref" path="."/>
+        <exclude domain="file" path="datastore/"/>
+        <exclude domain="file" path="musicverse_secure_keys_pref.xml"/>
+    </device-transfer>
+</data-extraction-rules>

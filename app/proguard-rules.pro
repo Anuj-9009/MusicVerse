@@ -26,4 +26,4 @@
 -keep class androidx.media3.** { *; }
 
 # Keep data models
--keep class com.hybridmusic.player.data.models.** { *; }
+-keep class com.musicverse.player.data.models.** { *; }

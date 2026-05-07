@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,12 +9,18 @@ plugins {
     kotlin("kapt")
 }
 
+// Load local.properties for API keys
+val localProperties = Properties()
+rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use {
+    localProperties.load(it)
+}
+
 android {
-    namespace = "com.hybridmusic.player"
+    namespace = "com.musicverse.player"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.hybridmusic.player"
+        applicationId = "com.musicverse.player"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -20,14 +28,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // API keys (loaded from secrets.properties or local.properties)
-        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${project.findProperty("SPOTIFY_CLIENT_ID") ?: ""}\"")
-        buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"${project.findProperty("SPOTIFY_CLIENT_SECRET") ?: ""}\"")
-        buildConfigField("String", "YOUTUBE_API_KEY", "\"${project.findProperty("YOUTUBE_API_KEY") ?: ""}\"")
-        buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_URL", "\"${project.findProperty("SUPABASE_URL") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${project.findProperty("SUPABASE_ANON_KEY") ?: ""}\"")
-        buildConfigField("String", "REDIS_URL", "\"${project.findProperty("REDIS_URL") ?: ""}\"")
+        // API keys (loaded from local.properties)
+        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${localProperties.getProperty("SPOTIFY_CLIENT_ID") ?: ""}\"")
+        buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"${localProperties.getProperty("SPOTIFY_CLIENT_SECRET") ?: ""}\"")
+        buildConfigField("String", "YOUTUBE_API_KEY", "\"${localProperties.getProperty("YOUTUBE_API_KEY") ?: ""}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY") ?: ""}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL") ?: ""}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY") ?: ""}\"")
+        buildConfigField("String", "REDIS_URL", "\"${localProperties.getProperty("REDIS_URL") ?: ""}\"")
     }
 
     buildTypes {
@@ -58,6 +66,14 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // NDK/CMake disabled — requires NDK to be installed
+    // externalNativeBuild {
+    //     cmake {
+    //         path = file("CMakeLists.txt")
+    //         version = "3.22.1"
+    //     }
+    // }
 }
 
 dependencies {
@@ -126,6 +142,17 @@ dependencies {
 
     // ── Palette (extract colors from album art) ──
     implementation("androidx.palette:palette-ktx:1.0.0")
+
+    // ── Google Generative AI (Gemini) ──
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // ── WorkManager (Offline-First Background Sync) ──
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
+
+    // ── Security & Tink AEAD ──
+    implementation("com.google.crypto.tink:tink-android:1.8.0")
 
     // ── Testing ──
     testImplementation("junit:junit:4.13.2")
