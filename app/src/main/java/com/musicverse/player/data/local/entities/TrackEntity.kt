@@ -2,7 +2,9 @@ package com.musicverse.player.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.compose.runtime.Immutable
 
+@Immutable
 @Entity(tableName = "tracks")
 data class TrackEntity(
     @PrimaryKey val id: String,

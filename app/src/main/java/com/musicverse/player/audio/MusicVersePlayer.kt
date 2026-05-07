@@ -298,7 +298,9 @@ class MusicVersePlayer @Inject constructor(
 }
 
 // ── State Models ──────────────────────────────────────────────────────────────
+import androidx.compose.runtime.Stable
 
+@Stable
 data class PlayerState(
     val currentTitle: String = "",
     val currentArtist: String = "",
