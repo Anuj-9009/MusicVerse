@@ -73,9 +73,16 @@ import kotlinx.coroutines.delay
  *   - Recent tracks list with play action
  *   - Staggered spring entrance animations
  */
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
     onNavigateToImport: () -> Unit = {},
     onNavigateToLibrary: () -> Unit = {},
@@ -202,27 +209,7 @@ fun HomeScreen(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Row 1
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                HeroGridCard(
-                                    modifier = Modifier.weight(1f),
-                                    title = "Import",
-                                    icon = Icons.Rounded.SyncAlt,
-                                    iconTint = MusicVerseColors.Success,
-                                    onClick = onNavigateToImport
-                                )
-                                HeroGridCard(
-                                    modifier = Modifier.weight(1f),
-                                    title = "Discover",
-                                    icon = Icons.Rounded.GraphicEq,
-                                    iconTint = MusicVerseColors.SunsetOrange,
-                                    onClick = onNavigateToDiscovery
-                                )
-                            }
-                            // Row 2
+                            // Simplified Quick Actions
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -236,61 +223,17 @@ fun HomeScreen(
                                 )
                                 HeroGridCard(
                                     modifier = Modifier.weight(1f),
-                                    title = "Stats",
-                                    icon = Icons.AutoMirrored.Rounded.TrendingUp,
-                                    iconTint = MusicVerseColors.Warning,
-                                    onClick = onNavigateToLibrary // Opens library with stats view
+                                    title = "Discover",
+                                    icon = Icons.Rounded.GraphicEq,
+                                    iconTint = MusicVerseColors.SunsetOrange,
+                                    onClick = onNavigateToDiscovery
                                 )
                             }
                         }
                     }
                 }
 
-                // ── Overview Section (Live Stats) ────────────────────────
-                item {
-                    AnimatedVisibility(
-                        visible = visible,
-                        enter = fadeIn(
-                            animationSpec = spring(stiffness = MusicVerseMotion.ENTRANCE_STIFFNESS)
-                        ) + slideInVertically(
-                            initialOffsetY = { 70 },
-                            animationSpec = spring(
-                                dampingRatio = MusicVerseMotion.ENTRANCE_DAMPING,
-                                stiffness = MusicVerseMotion.ENTRANCE_STIFFNESS
-                            )
-                        )
-                    ) {
-                        Column {
-                            EditorialSectionHeader(title = "OVERVIEW")
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                StatPill(
-                                    modifier = Modifier.weight(1f),
-                                    value = "${uiState.trackCount}",
-                                    label = "TRACKS",
-                                    accentColor = MusicVerseColors.ElectricBlue
-                                )
-                                StatPill(
-                                    modifier = Modifier.weight(1f),
-                                    value = "${uiState.versionCount}",
-                                    label = "VERSIONS",
-                                    accentColor = MusicVerseColors.SunsetOrange
-                                )
-                                StatPill(
-                                    modifier = Modifier.weight(1f),
-                                    value = if (uiState.avgVibeScore > 0) "${uiState.avgVibeScore}" else "—",
-                                    label = "AVG VIBE",
-                                    accentColor = MusicVerseColors.Success
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
             // ── "Imported" filter — show recent tracks ───────────────────
@@ -355,11 +298,9 @@ fun HomeScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "GET STARTED",
-                                    fontFamily = EditorialHeavy,
-                                    fontWeight = FontWeight.Normal,
-                                    fontSize = 28.sp,
-                                    letterSpacing = (-1).sp,
+                                    text = "Connect to Spotify",
+                                    style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
                                     color = MusicVerseColors.TextPrimary
                                 )
                                 Spacer(Modifier.height(8.dp))
@@ -396,6 +337,9 @@ fun HomeScreen(
                         title = track.title,
                         artist = track.artist,
                         albumArtUrl = track.albumArtUrl,
+                        trackId = track.id,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
                         onClick = { onNavigateToPlayer(track.id) }
                     )
                 }

@@ -11,14 +11,15 @@ import androidx.room.RoomDatabase
  * Version 2: Added versions table for AI-discovered alternate versions.
  */
 @Database(
-    entities = [TrackEntity::class, VersionEntity::class],
-    version = 2,
+    entities = [TrackEntity::class, VersionEntity::class, OfflineTrackEntity::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun trackDao(): TrackDao
     abstract fun versionDao(): VersionDao
+    abstract fun offlineTrackDao(): OfflineTrackDao
 
     companion object {
         private const val DB_NAME = "musicverse_db"

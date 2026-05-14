@@ -7,15 +7,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,7 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +36,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -64,24 +62,27 @@ import com.musicverse.player.ui.screens.library.TrackDetailScreen
 import com.musicverse.player.ui.screens.library.TrackDetailViewModel
 import com.musicverse.player.ui.screens.discovery.DiscoveryScreen
 import com.musicverse.player.ui.screens.discovery.DiscoveryViewModel
+import com.musicverse.player.ui.screens.login.LoginScreen
 import com.musicverse.player.ui.screens.player.PlayerScreen
 import com.musicverse.player.ui.screens.player.PlayerViewModel
 import com.musicverse.player.ui.screens.settings.SettingsScreen
 import com.musicverse.player.ui.screens.settings.SettingsViewModel
+import com.musicverse.player.ui.screens.profile.ProfileScreen
+import com.musicverse.player.ui.theme.InterFont
 import com.musicverse.player.ui.theme.MusicVerseColors
 import com.musicverse.player.ui.theme.MusicVerseTheme
-import com.musicverse.player.ui.theme.SpaceMono
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Main Activity — Single-Activity architecture with Jetpack Navigation.
  * Edge-to-edge rendering with transparent system bars.
- * Bottom navigation with liquid glass effect.
+ *
+ * Flow: Login → Main App (4 tabs: Home, Discover, Vault, Profile)
  *
  * Handles:
  *   - Spotify OAuth deep-link callback (musicverse://callback)
  *   - Navigation between all screens
- *   - Bottom nav bar with frosted glass effect
+ *   - Bottom nav bar with warm muted theme
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -126,10 +127,12 @@ class MainActivity : ComponentActivity() {
  * Navigation routes.
  */
 object Routes {
+    const val LOGIN = "login"
     const val HOME = "home"
     const val IMPORT = "import"
     const val LIBRARY = "library"
     const val DISCOVERY = "discovery"
+    const val PROFILE = "profile"
     const val TRACK_DETAIL = "track/{trackId}"
     const val PLAYER = "player/{trackId}"
     const val SETTINGS = "settings"
@@ -139,19 +142,26 @@ object Routes {
 }
 
 /**
- * Bottom nav destinations.
+ * Bottom nav destinations — matching Stitch design (4 tabs, icons-first).
  */
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     data object Home : BottomNavItem(Routes.HOME, Icons.Rounded.Home, "Home")
-    data object Library : BottomNavItem(Routes.LIBRARY, Icons.Rounded.LibraryMusic, "Library")
     data object Discovery : BottomNavItem(Routes.DISCOVERY, Icons.Rounded.Explore, "Discover")
+    data object Library : BottomNavItem(Routes.LIBRARY, Icons.Rounded.LibraryMusic, "Vault")
+    data object Profile : BottomNavItem(Routes.PROFILE, Icons.Rounded.Person, "Profile")
 }
 
-val bottomNavItems = listOf(BottomNavItem.Home, BottomNavItem.Library, BottomNavItem.Discovery)
+val bottomNavItems = listOf(
+    BottomNavItem.Home,
+    BottomNavItem.Discovery,
+    BottomNavItem.Library,
+    BottomNavItem.Profile
+)
 
 /**
- * Main NavHost with spring-physics transitions and bottom navigation.
+ * Main NavHost with warm muted bottom navigation.
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MusicVerseNavHost(
     navController: NavHostController,
@@ -162,18 +172,18 @@ fun MusicVerseNavHost(
     val currentDestination = navBackStackEntry?.destination
 
     // Show bottom nav only on main tabs
-    val showBottomNav = currentDestination?.route in listOf(Routes.HOME, Routes.LIBRARY, Routes.DISCOVERY)
+    val mainTabRoutes = listOf(Routes.HOME, Routes.LIBRARY, Routes.DISCOVERY, Routes.PROFILE)
+    val showBottomNav = currentDestination?.route in mainTabRoutes
 
     Scaffold(
         containerColor = MusicVerseColors.DeepCharcoal,
         bottomBar = {
             if (showBottomNav) {
-                // Liquid glass bottom navigation
                 NavigationBar(
-                    containerColor = MusicVerseColors.Surface1.copy(alpha = 0.85f),
+                    containerColor = MusicVerseColors.Surface1,
                     tonalElevation = 0.dp,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 ) {
                     bottomNavItems.forEach { item ->
                         val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
@@ -197,19 +207,18 @@ fun MusicVerseNavHost(
                             },
                             label = {
                                 Text(
-                                    text = item.label.uppercase(),
-                                    fontFamily = SpaceMono,
-                                    fontSize = 9.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                    letterSpacing = 1.sp
+                                    text = item.label,
+                                    fontFamily = InterFont,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MusicVerseColors.ElectricBlue,
-                                selectedTextColor = MusicVerseColors.ElectricBlue,
+                                selectedIconColor = MusicVerseColors.SunsetOrange,
+                                selectedTextColor = MusicVerseColors.SunsetOrange,
                                 unselectedIconColor = MusicVerseColors.TextTertiary,
                                 unselectedTextColor = MusicVerseColors.TextTertiary,
-                                indicatorColor = MusicVerseColors.ElectricBlueGlow
+                                indicatorColor = MusicVerseColors.SunsetOrangeGlow
                             )
                         )
                     }
@@ -223,139 +232,178 @@ fun MusicVerseNavHost(
                 .background(MusicVerseColors.DeepCharcoal)
                 .padding(paddingValues)
         ) {
-            NavHost(
-                navController = navController,
-                startDestination = Routes.HOME,
-                enterTransition = {
-                    fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
-                            slideIntoContainer(
-                                towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMedium
+            SharedTransitionLayout {
+                NavHost(
+                    navController = navController,
+                    startDestination = Routes.LOGIN,
+                    enterTransition = {
+                        fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
                                 )
-                            )
-                },
-                exitTransition = {
-                    fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh))
-                },
-                popEnterTransition = {
-                    fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
-                            slideIntoContainer(
-                                towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMedium
+                    },
+                    exitTransition = {
+                        fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh))
+                    },
+                    popEnterTransition = {
+                        fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
                                 )
-                            )
-                },
-                popExitTransition = {
-                    fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh))
-                }
-            ) {
-                composable(Routes.HOME) {
-                    val viewModel: HomeViewModel = hiltViewModel()
-                    HomeScreen(
-                        viewModel = viewModel,
-                        onNavigateToImport = { navController.navigate(Routes.IMPORT) },
-                        onNavigateToLibrary = { navController.navigate(Routes.LIBRARY) },
-                        onNavigateToDiscovery = { navController.navigate(Routes.DISCOVERY) },
-                        onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
-                        onNavigateToSearch = {
-                            // Navigate to library with search auto-opened
-                            navController.navigate(Routes.LIBRARY)
-                        },
-                        onNavigateToPlayer = { trackId ->
-                            navController.navigate(Routes.player(trackId))
-                        }
-                    )
-                }
-
-                composable(Routes.IMPORT) {
-                    val viewModel: ImportViewModel = hiltViewModel()
-
-                    // Register the auth callback so deep links reach the ViewModel
-                    onSetAuthCallback { uri ->
-                        viewModel.handleAuthCallback(uri)
+                    },
+                    popExitTransition = {
+                        fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh))
                     }
-
-                    ImportScreen(
-                        viewModel = viewModel,
-                        onNavigateBack = { navController.popBackStack() },
-                        onLaunchSpotifyAuth = { intent ->
-                            navController.context.startActivity(intent)
-                        }
-                    )
-                }
-
-                composable(Routes.LIBRARY) {
-                    val viewModel: LibraryViewModel = hiltViewModel()
-                    LibraryScreen(
-                        viewModel = viewModel,
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToImport = { navController.navigate(Routes.IMPORT) },
-                        onTrackClick = { track ->
-                            // Click a track → go to player directly
-                            navController.navigate(Routes.player(track.id))
-                        }
-                    )
-                }
-
-                composable(
-                    route = Routes.TRACK_DETAIL,
-                    arguments = listOf(navArgument("trackId") { type = NavType.StringType })
                 ) {
-                    val viewModel: TrackDetailViewModel = hiltViewModel()
-                    val track by viewModel.track.collectAsState()
-                    val isLoading by viewModel.isLoading.collectAsState()
-                    val trackId = it.arguments?.getString("trackId") ?: ""
-
-                    if (isLoading) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().background(MusicVerseColors.DeepCharcoal),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = MusicVerseColors.ElectricBlue)
-                        }
-                    } else if (track != null) {
-                        TrackDetailScreen(
-                            track = track!!,
-                            onNavigateBack = { navController.popBackStack() },
-                            onPlayTrack = { navController.navigate(Routes.player(trackId)) }
+                    // ── Login ──
+                    composable(Routes.LOGIN) {
+                        LoginScreen(
+                            onConnectSpotify = {
+                                navController.navigate(Routes.IMPORT) {
+                                    popUpTo(Routes.LOGIN) { inclusive = true }
+                                }
+                            },
+                            onConnectYouTube = {
+                                // Navigate to Home for now
+                                navController.navigate(Routes.HOME) {
+                                    popUpTo(Routes.LOGIN) { inclusive = true }
+                                }
+                            },
+                            onSkip = {
+                                navController.navigate(Routes.HOME) {
+                                    popUpTo(Routes.LOGIN) { inclusive = true }
+                                }
+                            }
                         )
-                    } else {
-                        PlaceholderScreen(title = "Track not found")
                     }
-                }
 
-                composable(
-                    route = Routes.PLAYER,
-                    arguments = listOf(navArgument("trackId") { type = NavType.StringType })
-                ) {
-                    val viewModel: PlayerViewModel = hiltViewModel()
-                    PlayerScreen(
-                        viewModel = viewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
+                    // ── Home ──
+                    composable(Routes.HOME) {
+                        val viewModel: HomeViewModel = hiltViewModel()
+                        HomeScreen(
+                            viewModel = viewModel,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable,
+                            onNavigateToImport = { navController.navigate(Routes.IMPORT) },
+                            onNavigateToLibrary = { navController.navigate(Routes.LIBRARY) },
+                            onNavigateToDiscovery = { navController.navigate(Routes.DISCOVERY) },
+                            onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                            onNavigateToSearch = {
+                                navController.navigate(Routes.LIBRARY)
+                            },
+                            onNavigateToPlayer = { trackId ->
+                                navController.navigate(Routes.player(trackId))
+                            }
+                        )
+                    }
 
-                composable(Routes.DISCOVERY) {
-                    val viewModel: DiscoveryViewModel = hiltViewModel()
-                    DiscoveryScreen(
-                        viewModel = viewModel,
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToPlayer = { trackId ->
-                            navController.navigate(Routes.player(trackId))
+                    // ── Import ──
+                    composable(Routes.IMPORT) {
+                        val viewModel: ImportViewModel = hiltViewModel()
+
+                        onSetAuthCallback { uri ->
+                            viewModel.handleAuthCallback(uri)
                         }
-                    )
-                }
 
-                composable(Routes.SETTINGS) {
-                    val viewModel: SettingsViewModel = hiltViewModel()
-                    SettingsScreen(
-                        viewModel = viewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
+                        ImportScreen(
+                            viewModel = viewModel,
+                            onNavigateBack = { navController.popBackStack() },
+                            onLaunchSpotifyAuth = { intent ->
+                                navController.context.startActivity(intent)
+                            }
+                        )
+                    }
+
+                    // ── Library (Vault) ──
+                    composable(Routes.LIBRARY) {
+                        val viewModel: LibraryViewModel = hiltViewModel()
+                        LibraryScreen(
+                            viewModel = viewModel,
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToImport = { navController.navigate(Routes.IMPORT) },
+                            onTrackClick = { track ->
+                                navController.navigate(Routes.player(track.id))
+                            }
+                        )
+                    }
+
+                    // ── Track Detail ──
+                    composable(
+                        route = Routes.TRACK_DETAIL,
+                        arguments = listOf(navArgument("trackId") { type = NavType.StringType })
+                    ) {
+                        val viewModel: TrackDetailViewModel = hiltViewModel()
+                        val track by viewModel.track.collectAsState()
+                        val isLoading by viewModel.isLoading.collectAsState()
+                        val trackId = it.arguments?.getString("trackId") ?: ""
+
+                        if (isLoading) {
+                            Box(
+                                modifier = Modifier.fillMaxSize().background(MusicVerseColors.DeepCharcoal),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = MusicVerseColors.Amber)
+                            }
+                        } else if (track != null) {
+                            TrackDetailScreen(
+                                track = track!!,
+                                onNavigateBack = { navController.popBackStack() },
+                                onPlayTrack = { navController.navigate(Routes.player(trackId)) }
+                            )
+                        } else {
+                            PlaceholderScreen(title = "Track not found")
+                        }
+                    }
+
+                    // ── Player ──
+                    composable(
+                        route = Routes.PLAYER,
+                        arguments = listOf(navArgument("trackId") { type = NavType.StringType })
+                    ) {
+                        val viewModel: PlayerViewModel = hiltViewModel()
+                        PlayerScreen(
+                            viewModel = viewModel,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    // ── Discovery ──
+                    composable(Routes.DISCOVERY) {
+                        val viewModel: DiscoveryViewModel = hiltViewModel()
+                        DiscoveryScreen(
+                            viewModel = viewModel,
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToPlayer = { trackId ->
+                                navController.navigate(Routes.player(trackId))
+                            }
+                        )
+                    }
+
+                    // ── Profile ──
+                    composable(Routes.PROFILE) {
+                        ProfileScreen(
+                            onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
+                        )
+                    }
+
+                    // ── Settings ──
+                    composable(Routes.SETTINGS) {
+                        val viewModel: SettingsViewModel = hiltViewModel()
+                        SettingsScreen(
+                            viewModel = viewModel,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
         }
@@ -378,5 +426,42 @@ fun PlaceholderScreen(title: String) {
             style = MaterialTheme.typography.displayMedium,
             color = MusicVerseColors.TextTertiary
         )
+    }
+}
+
+/**
+ * Profile screen placeholder matching the Stitch design.
+ */
+@Composable
+fun ProfilePlaceholderScreen(
+    onNavigateToSettings: () -> Unit = {}
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MusicVerseColors.DeepCharcoal),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.layout.Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Rounded.Person,
+                contentDescription = "Profile",
+                tint = MusicVerseColors.Amber,
+                modifier = Modifier.size(64.dp)
+            )
+            Text(
+                text = "Profile",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MusicVerseColors.TextPrimary
+            )
+            Text(
+                text = "Coming soon",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MusicVerseColors.TextTertiary
+            )
+        }
     }
 }

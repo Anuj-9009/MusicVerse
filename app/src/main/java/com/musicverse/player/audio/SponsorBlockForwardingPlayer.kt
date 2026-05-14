@@ -3,7 +3,7 @@ package com.musicverse.player.audio
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.ForwardingPlayer
+import androidx.media3.common.ForwardingPlayer
 import com.musicverse.player.data.api.SponsorSegment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

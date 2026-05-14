@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SyncAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -175,6 +176,81 @@ fun ImportScreen(
                                 onDismiss = viewModel::dismissError
                             )
                         }
+                    }
+                }
+            }
+
+            // ── Spotify Search ──
+            if (uiState.phase == ImportPhase.READY || uiState.phase == ImportPhase.COMPLETED) {
+                item {
+                    Column(
+                        modifier = Modifier.padding(horizontal = MusicVerseSpacing.ScreenMargin),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        SectionHeader(
+                            title = "Search Spotify",
+                            subtitle = "Find any track in the catalog"
+                        )
+
+                        // Search Bar
+                        androidx.compose.material3.OutlinedTextField(
+                            value = uiState.searchQuery,
+                            onValueChange = { query ->
+                                viewModel.updateSearchQuery(query)
+                                if (query.length >= 2) {
+                                    viewModel.searchSpotify(query)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Search songs, artists, albums...") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.Search,
+                                    contentDescription = "Search",
+                                    tint = MusicVerseColors.TextSecondary
+                                )
+                            },
+                            singleLine = true,
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MusicVerseColors.ElectricBlue,
+                                unfocusedBorderColor = MusicVerseColors.Surface3,
+                                focusedContainerColor = MusicVerseColors.Surface3,
+                                unfocusedContainerColor = MusicVerseColors.Surface3,
+                                focusedTextColor = MusicVerseColors.TextPrimary,
+                                unfocusedTextColor = MusicVerseColors.TextPrimary,
+                                cursorColor = MusicVerseColors.ElectricBlue
+                            ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                        )
+
+                        if (uiState.isSearching) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = MusicVerseColors.ElectricBlue,
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ── Search Results ──
+                if (uiState.searchResults.isNotEmpty()) {
+                    itemsIndexed(
+                        items = uiState.searchResults,
+                        key = { _, track -> "search_${track.id}" }
+                    ) { index, track ->
+                        SearchResultRow(
+                            title = track.title,
+                            artist = track.artist,
+                            albumArtUrl = track.albumArtUrl,
+                            onImport = { viewModel.importSearchResult(track) },
+                            modifier = Modifier.padding(horizontal = MusicVerseSpacing.ScreenMargin)
+                        )
                     }
                 }
             }
@@ -665,6 +741,82 @@ private fun ImportedTrackRow(
                     textColor = MusicVerseColors.ElectricBlue
                 )
             }
+        }
+    }
+}
+
+// ── Search Result Row ──
+
+@Composable
+private fun SearchResultRow(
+    title: String,
+    artist: String,
+    albumArtUrl: String?,
+    onImport: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Album art
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .background(MusicVerseColors.Surface3),
+            contentAlignment = Alignment.Center
+        ) {
+            if (albumArtUrl != null) {
+                AsyncImage(
+                    model = albumArtUrl,
+                    contentDescription = title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    Icons.Rounded.MusicNote,
+                    contentDescription = null,
+                    tint = MusicVerseColors.TextTertiary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(MusicVerseSpacing.M))
+
+        // Track info
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MusicVerseColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = artist,
+                style = MaterialTheme.typography.bodySmall,
+                color = MusicVerseColors.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // Import button
+        Button(
+            onClick = onImport,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MusicVerseColors.ElectricBlue,
+                contentColor = MusicVerseColors.TextOnAccent
+            ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier.height(32.dp)
+        ) {
+            Text("Add", style = MaterialTheme.typography.labelSmall)
         }
     }
 }

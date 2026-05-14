@@ -7,6 +7,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import javax.inject.Named
 
 /**
  * PlaybackService — Foreground Media3 Session Service
@@ -21,24 +22,27 @@ import javax.inject.Inject
 class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
-    private lateinit var player: ExoPlayer
+    
+    @Inject
+    @Named("PrimaryPlayer")
+    lateinit var player: ExoPlayer
 
     override fun onCreate() {
         super.onCreate()
 
-        // Build a dedicated ExoPlayer for the MediaSession
-        // (This is separate from MusicVersePlayer's dual-player engine;
-        //  it serves the OS-level controls and notification.)
+        // Use the globally injected primary player for the MediaSession
+        // Ensures UI and notification controls manipulate the exact same stream
         val audioAttributes = AudioAttributes.Builder()
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .setUsage(C.USAGE_MEDIA)
             .build()
 
-        player = ExoPlayer.Builder(this)
-            .setAudioAttributes(audioAttributes, /* handleAudioFocus= */ true)
-            .setHandleAudioBecomingNoisy(true) // Pause on headphone unplug
-            .build()
-
+        // Reconfigure the injected player for audio focus
+        player.setAudioAttributes(audioAttributes, true)
+        
+        // This is safe to call multiple times or on an existing player
+        // No need to build a new one!
+        
         mediaSession = MediaSession.Builder(this, player)
             .build()
     }

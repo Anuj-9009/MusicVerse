@@ -66,13 +66,8 @@ val SpaceMono = FontFamily(
 )
 
 // ── Tier 5: Base UI — Inter (Spotify clean readability) ──
-val InterFont = FontFamily(
-    Font(R.font.inter, weight = FontWeight.Light),
-    Font(R.font.inter, weight = FontWeight.Normal),
-    Font(R.font.inter, weight = FontWeight.Medium),
-    Font(R.font.inter, weight = FontWeight.SemiBold),
-    Font(R.font.inter, weight = FontWeight.Bold),
-)
+// Falling back to native SansSerif as the inter.ttf was corrupted (HTML document)
+val InterFont = androidx.compose.ui.text.font.FontFamily.SansSerif
 
 // ── Keep legacy references working ──
 val ClashGrotesk = EditorialHeavy

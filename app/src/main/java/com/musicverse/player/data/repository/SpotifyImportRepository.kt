@@ -227,4 +227,45 @@ class SpotifyImportRepository @Inject constructor(
     suspend fun clearAllTracks() {
         trackDao.deleteAllTracks()
     }
+
+    /**
+     * Search the Spotify catalog for tracks.
+     *
+     * @param query The search term (e.g. "Bohemian Rhapsody")
+     * @return A list of TrackEntity results from the Spotify catalog.
+     */
+    suspend fun searchTracks(query: String): Result<List<TrackEntity>> {
+        val token = authManager.getValidAccessToken()
+            ?: return Result.failure(Exception("Not authenticated with Spotify"))
+
+        return try {
+            val response = spotifyApi.searchTracks(
+                authHeader = token,
+                query = query,
+                limit = 20
+            )
+            val tracks = response.tracks?.items?.map { spotifyTrack ->
+                TrackEntity(
+                    id = spotifyTrack.id,
+                    title = spotifyTrack.name,
+                    artist = spotifyTrack.artists.joinToString(", ") { it.name },
+                    album = spotifyTrack.album?.name ?: "Unknown Album",
+                    albumArtUrl = spotifyTrack.album?.images?.firstOrNull()?.url,
+                    durationMs = spotifyTrack.durationMs,
+                    isrc = spotifyTrack.externalIds?.isrc,
+                    spotifyUri = "spotify:track:${spotifyTrack.id}"
+                )
+            } ?: emptyList()
+            Result.success(tracks)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Import a specific search result into the local Room DB.
+     */
+    suspend fun importTrack(track: TrackEntity) {
+        trackDao.insertTrack(track)
+    }
 }

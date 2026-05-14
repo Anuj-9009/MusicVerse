@@ -35,5 +35,11 @@ object DatabaseModule {
     fun provideVersionDao(database: AppDatabase): VersionDao {
         return database.versionDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideOfflineTrackDao(database: AppDatabase): com.musicverse.player.data.local.OfflineTrackDao {
+        return database.offlineTrackDao()
+    }
 }
 

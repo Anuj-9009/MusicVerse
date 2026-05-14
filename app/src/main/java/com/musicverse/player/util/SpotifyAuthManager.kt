@@ -11,6 +11,7 @@ import com.musicverse.player.data.api.SpotifyTokenResponse
 import com.musicverse.player.security.SecureDataStoreSerializer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -76,16 +77,20 @@ class SpotifyAuthManager @Inject constructor(
     /**
      * Observe whether the user is authenticated.
      */
-    val isAuthenticated: Flow<Boolean> = dataStore.data.map {
-        !parseTokens(it).accessToken.isNullOrBlank()
-    }
+    val isAuthenticated: Flow<Boolean> = dataStore.data
+        .catch { emit("") }
+        .map {
+            !parseTokens(it).accessToken.isNullOrBlank()
+        }
 
     /**
      * Observe the user's display name.
      */
-    val userDisplayName: Flow<String?> = dataStore.data.map {
-        parseTokens(it).userDisplayName
-    }
+    val userDisplayName: Flow<String?> = dataStore.data
+        .catch { emit("") }
+        .map {
+            parseTokens(it).userDisplayName
+        }
 
     /**
      * Build the Spotify authorization URL and launch it in the browser.

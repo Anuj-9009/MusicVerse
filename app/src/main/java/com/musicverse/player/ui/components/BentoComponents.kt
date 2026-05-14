@@ -1,7 +1,11 @@
 package com.musicverse.player.ui.components
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -253,13 +257,18 @@ fun FilterChipRow(
 /**
  * TrackRow — A Spotify-style list item with album art, title, and artist.
  */
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TrackRow(
     title: String,
     artist: String,
     albumArtUrl: String?,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trackId: String? = null,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -299,7 +308,19 @@ fun TrackRow(
                 AsyncImage(
                     model = it,
                     contentDescription = title,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier
+                        .size(48.dp)
+                        .then(
+                            if (sharedTransitionScope != null && animatedVisibilityScope != null && trackId != null) {
+                                with(sharedTransitionScope) {
+                                    Modifier.sharedBounds(
+                                        sharedContentState = rememberSharedContentState(key = "album_art_$trackId"),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        boundsTransform = { _, _ -> spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) }
+                                    )
+                                }
+                            } else Modifier
+                        )
                 )
             }
         }

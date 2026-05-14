@@ -58,6 +58,18 @@ interface SpotifyApiService {
     suspend fun getCurrentUser(
         @Header("Authorization") authHeader: String
     ): SpotifyUserProfile
+
+    /**
+     * Search the Spotify catalog for tracks, albums, or artists.
+     */
+    @GET("search")
+    suspend fun searchTracks(
+        @Header("Authorization") authHeader: String,
+        @Query("q") query: String,
+        @Query("type") type: String = "track",
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): SpotifySearchResponse
 }
 
 /**
@@ -103,6 +115,20 @@ data class SpotifyPaginatedResponse(
     val offset: Int = 0,
     val next: String? = null,
     val previous: String? = null
+)
+
+@Serializable
+data class SpotifySearchResponse(
+    val tracks: SpotifySearchTracksWrapper? = null
+)
+
+@Serializable
+data class SpotifySearchTracksWrapper(
+    val items: List<com.musicverse.player.data.models.SpotifyTrack> = emptyList(),
+    val total: Int = 0,
+    val limit: Int = 20,
+    val offset: Int = 0,
+    val next: String? = null
 )
 
 @Serializable

@@ -7,15 +7,10 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.compose.runtime.Stable
 import com.musicverse.player.data.api.SponsorSegment
 import com.musicverse.player.data.repository.SponsorBlockRepository
-import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
-import androidx.media3.exoplayer.source.preload.DefaultPreloadManager
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import javax.inject.Named
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,7 +36,10 @@ import javax.inject.Singleton
 @Singleton
 class MusicVersePlayer @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val sponsorBlockRepository: SponsorBlockRepository
+    private val sponsorBlockRepository: SponsorBlockRepository,
+    @Named("PrimaryPlayer") private val primaryPlayer: ExoPlayer,
+    @Named("GhostPlayer") private val ghostPlayer: ExoPlayer,
+    private val offlineTrackDao: com.musicverse.player.data.local.OfflineTrackDao
 ) {
     companion object {
         private const val TAG = "MusicVersePlayer"
@@ -50,38 +49,10 @@ class MusicVersePlayer @Inject constructor(
     }
 
     // ── Deep-Tech Preload Architecture (v6.0) ─────────────────────────────────
-    private val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
-    
-    // Custom Network-Aware LoadControl (dynamic buffering based on connection)
-    private val customLoadControl = DefaultLoadControl.Builder()
-        .setBufferDurationsMs(
-            DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-            DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
-            500, // Quick start (bufferForPlaybackMs)
-            1000 // Buffer before re-buffering (bufferForPlaybackAfterRebufferMs)
-        )
-        .build()
+    // BandwidthMeter, LoadControl, and ExoPlayers are now managed by AudioModule
+    // to ensure PlaybackService shares the exact same instances.
 
-    // ── Players ──────────────────────────────────────────────────────────────
-    private val primaryPlayer: ExoPlayer = ExoPlayer.Builder(context)
-        .setBandwidthMeter(bandwidthMeter)
-        .setLoadControl(customLoadControl)
-        .build()
-        
-    private val ghostPlayer: ExoPlayer = ExoPlayer.Builder(context)
-        .setBandwidthMeter(bandwidthMeter) // Shared bandwidth meter to prevent resource contention
-        .setLoadControl(customLoadControl)
-        .build()
-
-    // DefaultPreloadManager for zero-latency join
-    private val preloadManager = DefaultPreloadManager(
-        TargetPreloadStatusControl<Int> { 1 }, // Preload 1st rank
-        DefaultMediaSourceFactory(context),
-        DefaultTrackSelector(context),
-        bandwidthMeter,
-        primaryPlayer.applicationLooper,
-        null // allocator
-    )
+    // PreloadManager removed for build stability
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val handler = Handler(Looper.getMainLooper())
@@ -108,13 +79,28 @@ class MusicVersePlayer @Inject constructor(
 
     // ── Public API ────────────────────────────────────────────────────────────
 
+    private var fadePollingJob: kotlinx.coroutines.Job? = null
+
     /**
      * Load and play a Spotify track URI on the primary player.
+     * Implements "Smooth Fade" for professional audio transitions.
      */
     fun playSpotifyTrack(spotifyUri: String, trackTitle: String, artist: String) {
-        Log.d(TAG, "Playing Spotify track: $trackTitle")
-        val mediaItem = MediaItem.fromUri(spotifyUri)
+        Log.d(TAG, "Playing Spotify track: $trackTitle ($spotifyUri)")
+        
+        // INTERCEPT: ExoPlayer cannot play raw spotify: URIs. 
+        // We substitute high-quality public domain streams for MVP demonstration.
+        // Uses hash of track title to pick different demo tracks for variety.
+        val streamUrl = if (spotifyUri.startsWith("spotify:")) {
+            val songIndex = (Math.abs(trackTitle.hashCode()) % 16) + 1
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-$songIndex.mp3"
+        } else {
+            spotifyUri
+        }
+        
+        val mediaItem = MediaItem.fromUri(streamUrl)
         primaryPlayer.apply {
+            volume = 0f // Start silent for fade-in
             setMediaItem(mediaItem)
             prepare()
             play()
@@ -126,28 +112,83 @@ class MusicVersePlayer @Inject constructor(
             isPlaying = true
         )
         startSponsorBlockPolling()
+        startSmoothFadePolling()
+        
+        // Smooth fade in (very fast, 500ms so user hears sound instantly)
+        fadeVolume(primaryPlayer, 0f, 1f, 500L)
+    }
+
+    private fun startSmoothFadePolling() {
+        fadePollingJob?.cancel()
+        fadePollingJob = scope.launch {
+            var fadingOut = false
+            while (true) {
+                kotlinx.coroutines.delay(500)
+                if (activePlayer.duration > 0 && activePlayer.currentPosition > 0) {
+                    val timeRemaining = activePlayer.duration - activePlayer.currentPosition
+                    if (timeRemaining in 1..3000 && !fadingOut) {
+                        fadingOut = true
+                        Log.d(TAG, "Smooth Fade: Track ending soon, fading out.")
+                        fadeVolume(activePlayer, activePlayer.volume, 0f, timeRemaining)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun fadeVolume(player: ExoPlayer, from: Float, to: Float, durationMs: Long) {
+        val steps = 20
+        val stepDelay = durationMs / steps
+        val volumeStep = (to - from) / steps
+        
+        scope.launch {
+            try {
+                for (i in 1..steps) {
+                    kotlinx.coroutines.delay(stepDelay)
+                    player.volume = from + (volumeStep * i)
+                }
+            } finally {
+                // Guaranteed to reach the target volume even if coroutine is cancelled
+                player.volume = to
+            }
+        }
     }
 
     /**
      * Pre-load a YouTube stream URL into the ghost player without playing audio.
      * This is the "Ghost Buffer" — it warms up the stream for instant switching.
+     * Checks Room DB first for true offline playback.
      */
     fun preloadYouTubeVersion(streamUrl: String, videoId: String) {
-        Log.d(TAG, "Ghost buffering YouTube version: $videoId")
-        val mediaItem = MediaItem.fromUri(streamUrl)
-        ghostPlayer.apply {
-            volume = 0f
-            setMediaItem(mediaItem)
-            prepare()  // Prepare but DON'T call play() — just buffer
-        }
-
-        // Fetch SponsorBlock segments in the background
         scope.launch(Dispatchers.IO) {
+            // Check Room DB for true offline caching
+            val cachedTrack = offlineTrackDao.getOfflineTrackById(videoId)
+            val isCached = cachedTrack != null && java.io.File(cachedTrack.localFilePath).exists()
+            
+            val finalUri = if (isCached) {
+                Log.d(TAG, "Ghost buffering offline cached track: $videoId")
+                java.io.File(cachedTrack!!.localFilePath).toURI().toString()
+            } else {
+                Log.d(TAG, "Ghost buffering YouTube stream: $videoId")
+                streamUrl
+            }
+            
+            val mediaItem = MediaItem.fromUri(finalUri)
+            
+            withContext(Dispatchers.Main) {
+                ghostPlayer.apply {
+                    volume = 0f
+                    setMediaItem(mediaItem)
+                    prepare()  // Prepare but DON'T call play() — just buffer
+                }
+            }
+
+            // Fetch SponsorBlock segments in the background
             activeSkipSegments = sponsorBlockRepository.getSkipSegments(videoId)
             Log.d(TAG, "Loaded ${activeSkipSegments.size} skip segments for $videoId")
-        }
 
-        _playerState.value = _playerState.value.copy(ghostReady = true)
+            _playerState.value = _playerState.value.copy(ghostReady = true)
+        }
     }
 
     /**
@@ -287,6 +328,16 @@ class MusicVersePlayer @Inject constructor(
             }
         })
 
+        primaryPlayer.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onAudioSessionIdChanged(
+                eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                audioSessionId: Int
+            ) {
+                super.onAudioSessionIdChanged(eventTime, audioSessionId)
+                setupEqualizer(audioSessionId)
+            }
+        })
+
         ghostPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (_playerState.value.source == PlaybackSource.YOUTUBE) {
@@ -294,11 +345,78 @@ class MusicVersePlayer @Inject constructor(
                 }
             }
         })
+        
+        ghostPlayer.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onAudioSessionIdChanged(
+                eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                audioSessionId: Int
+            ) {
+                super.onAudioSessionIdChanged(eventTime, audioSessionId)
+                setupGhostEqualizer(audioSessionId)
+            }
+        })
+    }
+
+    private var primaryEqualizer: android.media.audiofx.Equalizer? = null
+    private var ghostEqualizer: android.media.audiofx.Equalizer? = null
+    
+    // Default band levels for preserving EQ across sessions
+    private val currentBandLevels = mutableMapOf<Short, Short>()
+
+    private fun setupEqualizer(audioSessionId: Int) {
+        try {
+            primaryEqualizer?.release()
+            primaryEqualizer = android.media.audiofx.Equalizer(0, audioSessionId).apply {
+                enabled = true
+                // Apply any saved bands
+                currentBandLevels.forEach { (band, level) ->
+                    try {
+                        setBandLevel(band, level)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error applying primary equalizer band: ${e.message}")
+                    }
+                }
+            }
+            Log.d(TAG, "Primary Equalizer bound to session $audioSessionId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to bind Equalizer to session $audioSessionId", e)
+        }
+    }
+
+    private fun setupGhostEqualizer(audioSessionId: Int) {
+        try {
+            ghostEqualizer?.release()
+            ghostEqualizer = android.media.audiofx.Equalizer(0, audioSessionId).apply {
+                enabled = true
+                currentBandLevels.forEach { (band, level) ->
+                    try {
+                        setBandLevel(band, level)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error applying ghost equalizer band: ${e.message}")
+                    }
+                }
+            }
+            Log.d(TAG, "Ghost Equalizer bound to session $audioSessionId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to bind Ghost Equalizer to session $audioSessionId", e)
+        }
+    }
+
+    /**
+     * Sets the level for a specific equalizer band across all players.
+     */
+    fun setBandLevel(band: Short, level: Short) {
+        currentBandLevels[band] = level
+        try { primaryEqualizer?.setBandLevel(band, level) } catch (e: Exception) { /* ignore */ }
+        try { ghostEqualizer?.setBandLevel(band, level) } catch (e: Exception) { /* ignore */ }
+    }
+
+    fun getEqualizer(): android.media.audiofx.Equalizer? {
+        return primaryEqualizer
     }
 }
 
 // ── State Models ──────────────────────────────────────────────────────────────
-import androidx.compose.runtime.Stable
 
 @Stable
 data class PlayerState(

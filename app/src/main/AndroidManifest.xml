@@ -49,6 +49,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Diagnostic Crash Activity -->
+        <activity android:name=".CrashActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HybridMusicPlayer"/>
+
         <!-- Media3 Playback Service -->
         <service
             android:name=".service.PlaybackService"

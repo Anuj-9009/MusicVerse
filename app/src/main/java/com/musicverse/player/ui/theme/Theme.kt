@@ -1,8 +1,6 @@
 package com.musicverse.player.ui.theme
 
 import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -12,18 +10,18 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
- * Hybrid Music Player Theme
+ * MusicVerse Theme — Warm Muted Dark
  *
- * Strict dark-mode only — Industrial Minimalist / Premium Audiophile.
- * No light theme variant. This is by design.
+ * Strict dark-mode only. Premium, natural aesthetic.
+ * Warm charcoal base with amber accents.
  */
 
-private val HybridDarkColorScheme = darkColorScheme(
-    // Primary accent — Electric Blue
-    primary = MusicVerseColors.ElectricBlue,
+private val WarmMutedColorScheme = darkColorScheme(
+    // Primary accent — Warm Amber
+    primary = MusicVerseColors.Amber,
     onPrimary = MusicVerseColors.TextOnAccent,
-    primaryContainer = MusicVerseColors.ElectricBlueDim,
-    onPrimaryContainer = MusicVerseColors.ElectricBlue,
+    primaryContainer = MusicVerseColors.AmberDim,
+    onPrimaryContainer = MusicVerseColors.Amber,
 
     // Secondary accent — Sunset Orange
     secondary = MusicVerseColors.SunsetOrange,
@@ -31,8 +29,8 @@ private val HybridDarkColorScheme = darkColorScheme(
     secondaryContainer = MusicVerseColors.SunsetOrangeDim,
     onSecondaryContainer = MusicVerseColors.SunsetOrange,
 
-    // Tertiary — Success green
-    tertiary = MusicVerseColors.Success,
+    // Tertiary — Teal
+    tertiary = MusicVerseColors.Teal,
     onTertiary = MusicVerseColors.TextOnAccent,
 
     // Background & Surface
@@ -56,10 +54,10 @@ private val HybridDarkColorScheme = darkColorScheme(
     error = MusicVerseColors.Error,
     onError = MusicVerseColors.TextOnAccent,
 
-    // Inverse (for snackbars, etc.)
+    // Inverse
     inverseSurface = MusicVerseColors.TextPrimary,
     inverseOnSurface = MusicVerseColors.DeepCharcoal,
-    inversePrimary = MusicVerseColors.ElectricBlueDim,
+    inversePrimary = MusicVerseColors.AmberDim,
 
     // Scrim
     scrim = MusicVerseColors.TrueBlack,
@@ -69,17 +67,15 @@ private val HybridDarkColorScheme = darkColorScheme(
 fun MusicVerseTheme(
     content: @Composable () -> Unit
 ) {
-    val colorScheme = HybridDarkColorScheme
+    val colorScheme = WarmMutedColorScheme
     val view = LocalView.current
 
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // Make status bar and nav bar fully transparent for edge-to-edge
             window.statusBarColor = MusicVerseColors.TrueBlack.toArgb()
             window.navigationBarColor = MusicVerseColors.TrueBlack.toArgb()
 
-            // Light icons on dark background
             val insetsController = WindowCompat.getInsetsController(window, view)
             insetsController.isAppearanceLightStatusBars = false
             insetsController.isAppearanceLightNavigationBars = false

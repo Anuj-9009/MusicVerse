@@ -45,3 +45,9 @@ google-services.json
 
 # Secrets
 secrets.properties
+
+# Kotlin compiler sessions
+.kotlin/
+
+# macOS
+.DS_Store

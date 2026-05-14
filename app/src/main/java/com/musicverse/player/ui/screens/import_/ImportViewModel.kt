@@ -25,7 +25,12 @@ data class ImportUiState(
     val currentPlaylistName: String = "",
     val recentlyImported: List<TrackEntity> = emptyList(),
     val errorMessage: String? = null,
-    val userDisplayName: String? = null
+    val userDisplayName: String? = null,
+    // Search
+    val searchQuery: String = "",
+    val searchResults: List<TrackEntity> = emptyList(),
+    val isSearching: Boolean = false,
+    val searchError: String? = null
 )
 
 enum class ImportPhase {
@@ -176,6 +181,51 @@ class ImportViewModel @Inject constructor(
                     errorMessage = null
                 )
             }
+        }
+    }
+
+    /**
+     * Update the search query text.
+     */
+    fun updateSearchQuery(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
+    }
+
+    /**
+     * Search the Spotify catalog.
+     */
+    fun searchSpotify(query: String) {
+        if (query.isBlank()) {
+            _uiState.value = _uiState.value.copy(searchResults = emptyList(), isSearching = false)
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSearching = true, searchError = null)
+            val result = repository.searchTracks(query)
+            result.fold(
+                onSuccess = { tracks ->
+                    _uiState.value = _uiState.value.copy(
+                        searchResults = tracks,
+                        isSearching = false
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        searchError = error.message ?: "Search failed",
+                        isSearching = false
+                    )
+                }
+            )
+        }
+    }
+
+    /**
+     * Import a specific search result track into the local library.
+     */
+    fun importSearchResult(track: TrackEntity) {
+        viewModelScope.launch {
+            repository.importTrack(track)
         }
     }
 }
