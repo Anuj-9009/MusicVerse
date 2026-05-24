@@ -1,20 +1,14 @@
-<!-- Header Block -->
-<div align="center">
-  <br />
-  <img src="assets/header-v2.svg" width="100%" alt="banner">
-  <p>
-    <img src="https://img.shields.io/badge/Status-In%20Development-orange" alt="Status In%20Development orange" /> <img src="https://img.shields.io/badge/Platform-Android-green" alt="Platform Android green" /> <img src="https://img.shields.io/badge/Min%20API-24-blue" alt="Min%20API 24 blue" /> <img src="https://img.shields.io/badge/Kotlin-2.0-purple" alt="Kotlin 2.0 purple" /> <img src="https://img.shields.io/badge/Jetpack%20Compose-BOM%202024.02-teal" alt="Jetpack%20Compose BOM%202024.02 teal" />
-  </p>
-  <p>
-    MusicVerse is a native Android application that reimagines music discovery by finding <b>alternate versions<b> (live performances, acoustic sessions, covers, remixes) of your favorite songs across Spotify and YouTube, powered by <b>Gemini AI<b> scoring.
-  </p>
-</div>
+# MusicVerse 🚀
 
-<hr style="border: 0; height: 1px; background-image: linear-gradient(to right, rgba(212, 168, 68, 0), rgba(212, 168, 68, 0.4), rgba(212, 168, 68, 0));" />
+MusicVerse is a native Android music discovery application built entirely in Kotlin and Jetpack Compose to scan Spotify track indexes and recommend alternate scoring versions on YouTube.
+
+---
+
+MusicVerse is a native Android music discovery application built entirely in Kotlin and Jetpack Compose to scan Spotify track indexes and recommend alternate scoring versions on YouTube.
+
+---
 
 > ⚠️ **DEVELOPMENTAL BUILD** — This project is in active development and may not work properly. See [Known Issues](#-known-issues--workarounds) below for details.
-
-
 
 ---
 
