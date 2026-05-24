@@ -30,6 +30,13 @@
   <circle class="glow-blob" cx="190" cy="80" r="75" fill="#E86833" />
   <circle class="glow-blob" cx="610" cy="90" r="65" fill="#D4A844" style="animation-delay: -3.5s;" />
   
+  <!-- Custom Retro Concentric Vinyl Sound Orbits -->
+    <circle cx="400" cy="80" r="70" stroke="rgba(212,168,68,0.08)" stroke-width="0.8" fill="none" />
+    <circle cx="400" cy="80" r="55" stroke="rgba(212,168,68,0.12)" stroke-width="0.8" fill="none" />
+    <circle cx="400" cy="80" r="40" stroke="rgba(232,104,51,0.15)" stroke-width="1.2" fill="none" />
+    <circle cx="400" cy="80" r="15" fill="#D4A844" opacity="0.1" />
+    <line x1="310" y1="80" x2="490" y2="80" stroke="rgba(212,168,68,0.1)" stroke-width="1" />
+  
   <!-- Title Text -->
   <text x="50%" y="78" dominant-baseline="middle" text-anchor="middle" class="text-title">M U S I C V E R S E</text>
   <text x="50%" y="122" dominant-baseline="middle" text-anchor="middle" class="text-subtitle">YOUR UNIVERSE OF ALTERNATE SOUNDS</text>
