@@ -323,4 +323,53 @@ This project is for educational purposes. All third-party APIs (Spotify, YouTube
 
 ---
 
-*Built with ❤️ using Jetpack Compose, Kotlin, and a lot of late-night debugging sessions.*
+<div align="center" style="background: radial-gradient(circle, rgba(212,168,68,0.08) 0%, transparent 80%); padding: 28px; border-radius: 20px;">
+  <!-- Vintage Vinyl / Alternate Universe Orbit (CSS SVG) -->
+  <svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 8px;">
+    <style>
+      .vinyl-groove {
+        stroke: #D4A844;
+        stroke-width: 1;
+        opacity: 0.3;
+      }
+      .orbit-node {
+        fill: #E86833;
+        animation: spinOrbit 5s infinite linear;
+        transform-origin: 100px 30px;
+      }
+      .equalizer-bar {
+        fill: #4DB6AC;
+        animation: eqJump 1.4s infinite alternate ease-in-out;
+      }
+      @keyframes spinOrbit {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes eqJump {
+        0% { height: 4px; y: 28px; }
+        100% { height: 20px; y: 12px; }
+      }
+    </style>
+    <!-- Concentric Grooves (Music Universe) -->
+    <circle cx="100" cy="30" r="25" class="vinyl-groove" stroke-dasharray="3 3" />
+    <circle cx="100" cy="30" r="18" class="vinyl-groove" />
+    <circle cx="100" cy="30" r="10" class="vinyl-groove" stroke="#E86833" />
+    <circle cx="100" cy="30" r="3" fill="#D4A844" />
+    
+    <!-- Rotating Alternate Sound Node -->
+    <circle class="orbit-node" cx="125" cy="30" r="3.5" filter="drop-shadow(0 0 3px #E86833)" />
+    
+    <!-- Micro Equalizer bars in background -->
+    <rect class="equalizer-bar" x="25" y="20" width="3" height="10" rx="1.5" style="animation-delay: -0.2s;" />
+    <rect class="equalizer-bar" x="33" y="15" width="3" height="15" rx="1.5" style="animation-delay: -0.6s;" />
+    <rect class="equalizer-bar" x="41" y="22" width="3" height="8" rx="1.5" style="animation-delay: -1.0s;" />
+    
+    <rect class="equalizer-bar" x="156" y="18" width="3" height="12" rx="1.5" style="animation-delay: -0.4s;" />
+    <rect class="equalizer-bar" x="164" y="12" width="3" height="18" rx="1.5" style="animation-delay: -0.8s;" />
+    <rect class="equalizer-bar" x="172" y="20" width="3" height="10" rx="1.5" style="animation-delay: -1.2s;" />
+  </svg>
+  
+  <p style="font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600; color: #D4A844; margin: 0; letter-spacing: 0.05em;">
+    built by anuj with ❤️ to the acoustic warmth of lauryn hill's "ex-factor"
+  </p>
+</div>
